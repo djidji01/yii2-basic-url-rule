@@ -4,10 +4,13 @@ Parsing and creating url with arguments pretified as well instead of in query st
 
 Conventions
 ----------
-Argument is prettified only if its  name is declared as  action method parameter otherwise it stay in query string format;
-Arguments are orderer by the way corresponding action method parameters are declared;
-Optional Argument nth binds to its corresponding action method parameter only if all arguments --nth are explicitly passed. --nth argments are inserted at their respective places in created url if were nor explicit.
-Arguments less than required or more than action method parameters show 404.
+1. Argument is prettified only if its name is declared as action method parameter otherwise it stay in query string format;
+
+1. Arguments are orderer by the way corresponding action method parameters are declared;
+
+1. Optional Argument nth binds to its corresponding action method parameter only if all arguments --nth are explicitly passed. --nth argments are inserted at their respective places in created url if were nor explicit;
+
+1. Arguments less than required or more than action method parameters show 404
 
 
 Installation
