@@ -62,23 +62,31 @@ class PostController extends Controller
     }
 }
 ```
-To create Url:
+### To create Url
 
-```Url::to(['post/index', 'year' => 2014, 'category' => 'php'])``` creates ```/index.php/post/index/r/php/2014``` ;
-```Url::to(['post/index', 'category' => 'php'])``` creates ```/index.php/post/index/r/php```
-```Url::to(['post/index', 'category' => 'php','tag'=>'programming'])``` creates ```/index.php/post/index/r/php/2015/programming```. default value of parameter 'year' is inserted at its place
+- ```Url::to(['post/index', 'year' => 2014, 'category' => 'php'])``` creates  ```/index.php/post/index/r/php/2014``` ;
 
-```Url::to(['post/index','year' => 2014, 'category' => 'php'])``` result to `false` because the argument for required `$category` parameter is not passed;
-```Url::to(['post/view', 'id' => 100])``` creates ```/index.php/post/view/r/100``` ;
-```Url::to(['post/view', 'id' => 100, 'source' => 'ad'])``` creates ```creates /index.php/post/view/r/100?source=ad```. Because "source" argument is not declared as actionView methoth, it is appended as a query parameter in the created URL.
+- ```Url::to(['post/index', 'category' => 'php'])``` creates ```/index.php/post/index/r/php```;
 
-To parse Url
+- ```Url::to(['post/index', 'category' => 'php','tag'=>'programming'])``` creates ```/index.php/post/index/r/php/2015/programming```. default value of parameter 'year' is inserted at its place;
 
-```/index.php/post/index```  result to `false` because actionIndex has required firs parameter that need argments to be passed.
+- ```Url::to(['post/index','year' => 2014, 'category' => 'php'])``` result to `false` because the argument for required `$category` parameter is not passed;
 
-```/index.php/post/index/r/php``` is parsed to ```['post/index', ['category' => 'php']]```;
-```/index.php/post/index/r/php/2015/programming``` is parsed to ```['post/index', ['category' => 'php','tag'=>'programming','year'=>2015]]```;
-```/index.php/post/index/r/php/programming``` is parsed to ```['post/index', ['category' => 'php','year'=>'programming']]```;
-```/index.php/post/view/r/100?source=ad``` is parsed to ['post/view', ['id' => 100]]
-```/index.php/post/view/r/100/ad?source=ad``` result to `false` because actionView method expect one argment instead of two.
+- ```Url::to(['post/view', 'id' => 100])``` creates ```/index.php/post/view/r/100``` ;
+
+- ```Url::to(['post/view', 'id' => 100, 'source' => 'ad'])``` creates ```creates /index.php/post/view/r/100?source=ad```. Because "source" argument is not declared as actionView methoth, it is appended as a query parameter in the created URL.
+
+### To parse Url
+
+- ```/index.php/post/index```  result to `false` because actionIndex has required firs parameter that need argments to be passed.
+
+- ```/index.php/post/index/r/php``` is parsed to ```['post/index', ['category' => 'php']]``` ;
+
+- ```/index.php/post/index/r/php/2015/programming``` is parsed to ```['post/index', ['category' => 'php','tag'=>'programming','year'=>2015]]``` ;
+
+- ```/index.php/post/index/r/php/programming``` is parsed to ```['post/index', ['category' => 'php','year'=>'programming']]``` ;
+
+- ```/index.php/post/view/r/100?source=ad``` is parsed to `['post/view', ['id' => 100]]`;
+
+- ```/index.php/post/view/r/100/ad?source=ad``` result to `false` because actionView method expect one argment instead of two.
 
