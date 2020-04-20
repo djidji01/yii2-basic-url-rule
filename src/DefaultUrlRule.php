@@ -5,7 +5,6 @@ namespace djidji;
 use Yii;
 use yii\base\BaseObject;
 use yii\web\UrlRuleInterface;
-use yii\caching\CacheInterface;
 
 class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
 {
@@ -34,7 +33,6 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             $routes=require $this->routesFile;
         }
         if (!isset($routes[$cacheKey])) {
-
             if ($parts=Yii::$app->createController($route)) {
                 $params=$this->validateActionId($parts[0],$parts[1],$urlArgs);
                 if (is_array($params)) {
@@ -45,6 +43,8 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
                 }else {
                     return false;
                 }
+            }else {
+                return false;
             }
         }else{
             $routeConf=$routes[$cacheKey];
@@ -96,43 +96,48 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
                 return false;
             }
         }
-
-        $result=[$pathInfo, []];
         $pathInfo=trim($pathInfo,'/');
         if (strpos($pathInfo, "/{$manager->routeParam}/") !== false) {
             list($route,$urlArgs)=explode("/{$manager->routeParam}/",$pathInfo);
             $urlArgs=explode('/',$urlArgs);
-            $cacheKey =$route.'&'.count($urlArgs);
+        }else {
+            $route=$pathInfo!==''?$pathInfo:Yii::$app->defaultRoute;
+            $urlArgs=[];
+        }
+            
+        $cacheKey =$route.'&'.count($urlArgs);
 
-            if (\file_exists($this->routesFile)) {
-                $routes=require $this->routesFile;
-            }
+        if (\file_exists($this->routesFile)) {
+            $routes=require $this->routesFile;
+        }
 
-            if (!isset($routes[$cacheKey])) {
-                if ($parts=Yii::$app->createController($route)) {
-                    if ($params=$this->validateActionId($parts[0],$parts[1],$urlArgs,true)) {
-                        $routeKey=$route.'&'.implode('$',array_keys($params));
-                        if (!isset($routes[$routeKey])) {
-                            $routes[$routeKey]=['route'=>$route,'params'=>array_keys($params)];
-                        }
-                        $routes[$cacheKey]=$routeKey;
-                        file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
-
+        if (!isset($routes[$cacheKey])) {
+            if ($parts=Yii::$app->createController($route)) {
+                if (($params=$this->validateActionId($parts[0],$parts[1],$urlArgs,true))!==false) {
+                    $routeKey=$route.'&'.implode('$',array_keys($params));
+                    if (!isset($routes[$routeKey])) {
+                        $routes[$routeKey]=['route'=>$route,'params'=>array_keys($params)];
                     }
-                }
-            }else{
-                $params=array_combine($routes[$routes[$cacheKey]]['params'], $urlArgs);
+                    $routes[$cacheKey]=$routeKey;
+                    file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
 
+                }else {
+                    return false;
+                }
+            }else {
+                return false;
             }
-            $result=[$route,$params];
+        }else{
+            $params=array_combine($routes[$routes[$cacheKey]]['params'], $urlArgs);
+
         }
 
         if ($normalized) {
             // pathInfo was changed by normalizer - we need also normalize route
-            return $manager->normalizer->normalizeRoute($result);
+            return $manager->normalizer->normalizeRoute([$route,$params]);
         }
 
-        return $result;
+        return [$route,$params];
     }
 
 
