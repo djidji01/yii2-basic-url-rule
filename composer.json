@@ -1,0 +1,21 @@
+{
+    "name": "djidji/yii2-default-url-rule",
+    "description": "Parsing and creating url with arguments pretified as well instead of in query string format",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension","basicUrlRule"," urlRule"," urlManager"," prettyUrl","enablePrettyUrl"],
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Djibril Mbarushimana",
+            "email": "djidji01@gmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "~2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "djidji\\": "src"
+        }
+    }
+}
