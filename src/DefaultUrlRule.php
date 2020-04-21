@@ -101,10 +101,10 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             list($route,$urlArgs)=explode("/{$manager->routeParam}/",$pathInfo);
             $urlArgs=explode('/',$urlArgs);
         }else {
-            $route=$pathInfo!==''?$pathInfo:Yii::$app->defaultRoute;
+            $route=$pathInfo;
             $urlArgs=[];
         }
-            
+
         $cacheKey =$route.'&'.count($urlArgs);
 
         if (\file_exists($this->routesFile)) {
