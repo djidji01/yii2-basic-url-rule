@@ -27,33 +27,15 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             return false;
         }
         $args='';
-        $cacheKey =$route.'&'.implode('$',array_keys($urlArgs));
 
-        if (\file_exists($this->routesFile)) {
-            $routes=require $this->routesFile;
-        }
-        if (!isset($routes[$cacheKey])) {
-            if ($parts=Yii::$app->createController($route)) {
-                $params=$this->validateActionId($parts[0],$parts[1],$urlArgs);
-                if (is_array($params)) {
-                    $routeConf=$routes[$cacheKey]=['route'=>$route,'params'=>array_keys($params)];
-
-                    file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
-
-                }else {
-                    return false;
-                }
-            }else {
-                return false;
-            }
-        }else{
-            $routeConf=$routes[$cacheKey];
+        if (($params=$this->normalizeUrlArgs($route,$urlArgs,false))===false) {
+            return false;
         }
 
-        foreach ($routeConf['params'] as $argName) {
-            if (array_key_exists($argName, $urlArgs)) {
-                $args .= '/'.$urlArgs[$argName];
-                unset($urlArgs[$argName]);
+        foreach ($params as $paramName) {
+            if (array_key_exists($paramName, $urlArgs)) {
+                $args .= '/'.$urlArgs[$paramName];
+                unset($urlArgs[$paramName]);
             }
         }
 
@@ -77,9 +59,30 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
         if ($manager->enableStrictParsing) {
             return false;
         }
-        $suffix = (string) $manager->suffix;
         $pathInfo = $request->getPathInfo();
         $normalized = false;
+        $pathInfoParts=$this->parsePathInfo($manager, $pathInfo, $normalized);
+        if($pathInfoParts===false){
+            return false;
+        }
+        list($route,$urlArgs)=$pathInfoParts;
+
+        if (($params=$this->normalizeUrlArgs($route,$urlArgs))===false) {
+            return false;
+        }
+
+        if ($normalized) {
+            // pathInfo was changed by normalizer - we need also normalize route
+            return $manager->normalizer->normalizeRoute([$route,$params]);
+        }
+
+        return [$route,$params];
+    }
+
+    protected function parsePathInfo($manager, $pathInfo, &$normalized)
+    {
+        $suffix = (string) $manager->suffix;
+
         if ($manager->normalizer !== false) {
             $pathInfo = $manager->normalizer->normalizePathInfo($pathInfo, $suffix, $normalized);
         }
@@ -105,20 +108,34 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             $urlArgs=[];
         }
 
-        $cacheKey =$route.'&'.count($urlArgs);
+        return [$route,$urlArgs];
+    }
 
+    protected function normalizeUrlArgs($route,$urlArgs,$isParse=true)
+    {
+
+        if ($isParse) {
+            $cacheKey = $route.'&'.count($urlArgs);
+        }else {
+            ksort ($urlArgs);
+            $cacheKey =$route.'&'.implode('$',array_keys($urlArgs));
+        }
         if (\file_exists($this->routesFile)) {
             $routes=require $this->routesFile;
         }
 
         if (!isset($routes[$cacheKey])) {
             if ($parts=Yii::$app->createController($route)) {
-                if (($params=$this->validateActionId($parts[0],$parts[1],$urlArgs,true))!==false) {
-                    $routeKey=$route.'&'.implode('$',array_keys($params));
-                    if (!isset($routes[$routeKey])) {
-                        $routes[$routeKey]=['route'=>$route,'params'=>array_keys($params)];
+                if (($params=$this->validateActionId($parts[0],$parts[1],$urlArgs,$isParse))!==false) {
+                    if($isParse){
+                        $routeKey=$route.'&'.implode('$',array_keys($params));
+                        if (!isset($routes[$routeKey])) {
+                            $routes[$routeKey]=['route'=>$route,'params'=>array_keys($params)];
+                        }
+                        $routes[$cacheKey]=$routeKey;
+                    }else{
+                        $routes[$cacheKey]=['route'=>$route,'params'=>array_keys($params)];
                     }
-                    $routes[$cacheKey]=$routeKey;
                     file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
 
                 }else {
@@ -128,16 +145,11 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
                 return false;
             }
         }else{
-            $params=array_combine($routes[$routes[$cacheKey]]['params'], $urlArgs);
+            $params=$isParse?array_combine($routes[$routes[$cacheKey]]['params'], $urlArgs):$routes[$cacheKey]['params'];
 
         }
 
-        if ($normalized) {
-            // pathInfo was changed by normalizer - we need also normalize route
-            return $manager->normalizer->normalizeRoute([$route,$params]);
-        }
-
-        return [$route,$params];
+        return $params;
     }
 
 
