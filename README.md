@@ -73,7 +73,7 @@ class PostController extends Controller
 
 - `Url::to(['post/index', 'category' => 'php','tag'=>'programming'])` creates `/index.php/post/index/r/php/2015/programming`. default value of parameter 'year' is inserted at its place;
 
-- `Url::to(['post/index','year' => 2014, 'category' => 'php'])` result to `false` because the argument for required `$category` parameter is not passed;
+- `Url::to(['post/index','year' => 2014])` result to `false` because the argument for required `$category` parameter is not passed;
 
 - `Url::to(['post/view', 'id' => 100])` creates `/index.php/post/view/r/100` ;
 
