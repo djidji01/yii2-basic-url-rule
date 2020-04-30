@@ -31,8 +31,8 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
         if (($params=$this->normalizeUrlArgs($route,$urlArgs,false))===false) {
             return false;
         }
-
-        foreach ($params as $paramName) {
+        $urlArgs=array_replace($params, $urlArgs);
+        foreach ($params as $paramName=>$paramValue) {
             if (array_key_exists($paramName, $urlArgs)) {
                 $args .= '/'.$urlArgs[$paramName];
                 unset($urlArgs[$paramName]);
@@ -117,6 +117,7 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
         if ($isParse) {
             $cacheKey = $route.'&'.count($urlArgs);
         }else {
+
             ksort ($urlArgs);
             $cacheKey =$route.'&'.implode('$',array_keys($urlArgs));
         }
@@ -126,15 +127,16 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
 
         if (!isset($routes[$cacheKey])) {
             if ($parts=Yii::$app->createController($route)) {
-                if (($params=$this->validateActionId($parts[0],$parts[1],$urlArgs,$isParse))!==false) {
+                if (($args=$this->validateActionId($parts[0],$parts[1],$urlArgs,$isParse))!==false) {
+                    list($params,$actionParams)=$args;
                     if($isParse){
-                        $routeKey=$route.'&'.implode('$',array_keys($params));
+                        $routeKey=$route.'&'.implode('$',array_keys($actionParams));
                         if (!isset($routes[$routeKey])) {
-                            $routes[$routeKey]=['route'=>$route,'params'=>array_keys($params)];
+                            $routes[$routeKey]=['route'=>$route,'params'=>$actionParams];
                         }
                         $routes[$cacheKey]=$routeKey;
                     }else{
-                        $routes[$cacheKey]=['route'=>$route,'params'=>array_keys($params)];
+                        $routes[$cacheKey]=['route'=>$route,'params'=>$actionParams];
                     }
                     file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
 
@@ -144,9 +146,12 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             }else {
                 return false;
             }
+        }elseif ($isParse) {
+            $actionArgs=$routes[$routes[$cacheKey]]['params'];
+            $actionParams=array_keys($actionArgs);
+            $params=array_replace($actionArgs, array_combine( $actionParams, $urlArgs));
         }else{
-            $params=$isParse?array_combine($routes[$routes[$cacheKey]]['params'], $urlArgs):$routes[$cacheKey]['params'];
-
+            $params=$routes[$cacheKey]['params'];
         }
 
         return $params;
@@ -200,6 +205,7 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
      */
     public function routifyUrlParams($method,$urlArgs)
     {
+        $actionArgs = [];
         $actionParams = [];
         $optionals=[];
         foreach ($method->getParameters()as $index => $param) {
@@ -211,19 +217,21 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
             if (array_key_exists($name, $urlArgs)) {
 
                 if ($param->isDefaultValueAvailable()) {
+                    $actionArgs+=$optionals;
                     $actionParams+=$optionals;
+                    $actionParams[$name]=$param->getDefaultValue();
                     $optionals=[];
-
+                }else {
+                    $actionParams[$name] = null;
                 }
-                $actionParams[$name] = $urlArgs[$name];
-                unset($urlArgs[$name]);
+                $actionArgs[$name] = $urlArgs[$name];
             }elseif ($param->isDefaultValueAvailable()) {
                 $optionals[$name]=$param->getDefaultValue();
 
             }
         }
 
-        return $actionParams;
+        return [$actionArgs,$actionParams];
 
     }
 
