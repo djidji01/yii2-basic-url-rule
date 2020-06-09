@@ -3,19 +3,32 @@
 namespace djidji;
 
 use Yii;
+use yii\di\Instance;
 use yii\base\BaseObject;
 use yii\web\UrlRuleInterface;
 
+
 class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
 {
-    public $routesFile='@app/config/routes.php';
+    /**
+     * @var object|string|array $cache an instance of [['yii\caching\Cache']].
+     * You may specify $cache in terms of a component ID.
+     * You may also pass in a configuration array for creating the object.
+     * If the "class" value is not specified in the configuration array, it will use the value of `$type`.
+     *
+     *  string
+     */
+    private $cache=null;
+    private $_cache=null;
 
     /**
      * Initializes this rule by ensuring the path for routes file exists.
      */
     public function init()
     {
-        $this->routesFile = Yii::getAlias($this->routesFile);
+        if ($this->cache !== false) {
+            $this->_cache = Instance::ensure($this->cache?:Yii::$app->getCache(), 'yii\caching\CacheInterface');
+        }
     }
 
     /**
@@ -111,47 +124,42 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
         return [$route,$urlArgs];
     }
 
-    protected function normalizeUrlArgs($route,$urlArgs,$isParse=true)
+    protected function normalizeUrlArgs($url,$urlArgs,$isParse=true)
     {
-
-        if ($isParse) {
-            $cacheKey = $route.'&'.count($urlArgs);
-        }else {
-
-            ksort ($urlArgs);
-            $cacheKey =$route.'&'.implode('$',array_keys($urlArgs));
+        $params=false;
+        if ($this->cache !== false) {
+            if ($isParse) {
+                $id = $url.'&'.count($urlArgs);
+            }else {
+                ksort ($urlArgs);
+                $id =$url.'&'.implode('$',array_keys($urlArgs));
+            }
+            $params = $this->_cache->get($id);
         }
-        if (\file_exists($this->routesFile)) {
-            $routes=require $this->routesFile;
-        }
 
-        if (!isset($routes[$cacheKey])) {
-            if ($parts=Yii::$app->createController($route)) {
+        if ($params===false) {
+            if ($parts=Yii::$app->createController($url)) {
                 if (($args=$this->validateActionId($parts[0],$parts[1],$urlArgs,$isParse))!==false) {
                     list($params,$actionParams)=$args;
-                    if($isParse){
-                        $routeKey=$route.'&'.implode('$',array_keys($actionParams));
-                        if (!isset($routes[$routeKey])) {
-                            $routes[$routeKey]=['route'=>$route,'params'=>$actionParams];
+                    if ($this->cache !== false) {
+                        if($isParse){
+                            $route_id=$url.'&'.implode('$',array_keys($actionParams));
+                            $route=['url_id'=>$id,'route_id'=>$route_id,'params'=>json_encode($actionParams)];
+                        }else{
+                            $url_id = $url.'&'.count($actionParams);
+                            $route=['url_id'=>$url_id,'route_id'=>$id,'params'=>json_encode($actionParams)];
                         }
-                        $routes[$cacheKey]=$routeKey;
-                    }else{
-                        $routes[$cacheKey]=['route'=>$route,'params'=>$actionParams];
-                    }
-                    file_put_contents($this->routesFile, "<?php  \nreturn ".var_export($routes,true).";");
 
-                }else {
-                    return false;
+                        $this->_cache->set($id,$route);
+                    }
                 }
-            }else {
-                return false;
             }
         }elseif ($isParse) {
-            $actionArgs=$routes[$routes[$cacheKey]]['params'];
+            $actionArgs=json_decode($params['params'],true);
             $actionParams=array_keys($actionArgs);
             $params=array_replace($actionArgs, array_combine( $actionParams, $urlArgs));
         }else{
-            $params=$routes[$cacheKey]['params'];
+            $params=json_decode($params['params'],true);
         }
 
         return $params;
