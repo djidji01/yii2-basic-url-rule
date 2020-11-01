@@ -216,9 +216,16 @@ class DefaultUrlRule extends BaseObject  implements UrlRuleInterface
         $actionArgs = [];
         $actionParams = [];
         $optionals=[];
+        $pos=0;
         foreach ($method->getParameters()as $index => $param) {
-            $name = $param->getName();
-            if (isset($urlArgs[$index])) {
+            $name = $param->getName();            
+            if ($paramType=$param->getType()) {
+                if(class_exists(class_exists('\ReflectionNamedType')?$paramType->getName():"$paramType")){
+                    $pos++;
+                    continue;
+                };
+            }            
+            if (isset($urlArgs[$index-$pos])) {
                 $urlArgs[$name]=$urlArgs[$index];
                 unset($urlArgs[$index]);
             }
